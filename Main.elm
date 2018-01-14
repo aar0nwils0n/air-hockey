@@ -93,25 +93,14 @@ update msg model =
         Tick _ ->
             let
                 puck: Puck
-                puck = 
-                if 
-                    circlesCollide { x =  model.puck.x
-                        , y = model.puck.y
-                        , radius = model.puck.size
-                    }
-                    { x = model.striker.x
-                        , y = model.striker.y
-                        , radius = model.striker.size
-                    }
-                then
-                    strikePuck model.puck model.striker
-                else
-                    model.puck
-
-                incrementedPuck =  { puck | x = puck.x + puck.xSpeed
+                puck =  model.puck
+                incrementedPuck = { puck | x = puck.x + puck.xSpeed
                     , y = puck.y + puck.ySpeed}
+                batch = createBatch model
+                newCanvas = Canvas.draw batch model.canvas
             in
-                ({ model | puck = incrementedPuck }, Cmd.none)
+                ({ model | puck = calcPuckStrike (wallBounce incrementedPuck model.size) model.striker
+                 , canvas = newCanvas }, Cmd.none)
 
 subscriptions: Model -> Sub Msg
 subscriptions model = 
@@ -198,6 +187,41 @@ distance model =
         hypot =  sqrt (xDiff^2 + yDiff^2)
     in
         (hypot - model.puck.size - model.striker.size )
+
+incrementStrikerPosition : Striker -> Striker
+incrementStrikerPosition striker = { striker | x = striker.x + striker.xSpeed
+    , y = striker.y + striker.ySpeed }
+
+calcPuckStrike : Puck -> Striker -> Puck
+calcPuckStrike puck striker = 
+    if 
+        circlesCollide { x = puck.x
+            , y = puck.y
+            , radius = puck.size
+        }
+        { x = striker.x
+            , y = striker.y
+            , radius = striker.size
+        }
+    then
+        strikePuck puck striker
+    else
+        puck
+
+wallBounce : Puck -> Canvas.Size -> Puck
+wallBounce puck canvasSize = 
+    let
+        xSpeed = 
+            if puck.x <= puck.size || puck.x > toFloat canvasSize.width - puck.size
+            then -puck.xSpeed
+            else puck.xSpeed
+
+        ySpeed = 
+            if puck.y <= puck.size || puck.y > toFloat canvasSize.height - puck.size
+            then -puck.ySpeed
+            else puck.ySpeed
+    in
+        { puck | ySpeed = ySpeed, xSpeed = xSpeed }
 
 
 
