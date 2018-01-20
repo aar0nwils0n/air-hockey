@@ -75,38 +75,38 @@ update msg model =
                    , size = canvasSize  }, Cmd.none)
         MouseMove x y ->
             let
-                batch = createBatch model
-                newCanvas = Canvas.draw batch model.canvas
                 oldStriker = model.striker
-                newX = toFloat x - oldStriker.size / 4
-                newY = toFloat y - oldStriker.size / 4
-                striker = { oldStriker | x = newX
-                , y = newY
-                , xSpeed = abs (oldStriker.xSpeed - toFloat x)
-                , ySpeed = abs (oldStriker.ySpeed - toFloat y) }
+                
             in
                 ({ model | mouseX = x
-                , mouseY = y
-                , striker = striker
-                , canvas = newCanvas }
+                , mouseY = y }
                 , Cmd.none)
         Tick _ ->
             let
                 puck: Puck
                 puck =  model.puck
+                oldStriker = model.striker
                 incrementedPuck = { puck | x = puck.x + puck.xSpeed
-                    , y = puck.y + puck.ySpeed}
+                    , y = puck.y + puck.ySpeed }
+                newX = toFloat model.mouseX - oldStriker.size / 4
+                newY = toFloat model.mouseY - oldStriker.size / 4
+                strikerWithSpeed = { oldStriker | 
+                     xSpeed = abs (newX - oldStriker.x)
+                    , ySpeed = abs (newY - oldStriker.y)
+                    , x = newX
+                    , y = newY }
                 batch = createBatch model
                 newCanvas = Canvas.draw batch model.canvas
             in
-                ({ model | puck = calcPuckStrike (wallBounce incrementedPuck model.size) model.striker
-                 , canvas = newCanvas }, Cmd.none)
+                ({ model | puck = calcPuckStrike (wallBounce incrementedPuck model.size) strikerWithSpeed
+                 , canvas = newCanvas
+                 , striker = strikerWithSpeed }, Cmd.none)
 
 subscriptions: Model -> Sub Msg
 subscriptions model = 
     Sub.batch [
         Mouse.moves (\{x, y} -> MouseMove x y)
-        ,   Time.every (second / 24) Tick
+        ,   Time.every (second / 30) Tick
     ]
 
 
@@ -159,8 +159,8 @@ strikePuck puck striker =
     let
         angle = atan2 ( striker.y - puck.y ) ( striker.x - puck.x ) 
     in
-        { puck | xSpeed = ( cos angle ) * -striker.xSpeed * 0.025
-        , ySpeed = ( sin angle ) * -striker.ySpeed * 0.025 }
+        { puck | xSpeed = ( cos angle ) * -striker.xSpeed
+        , ySpeed = ( sin angle ) * -striker.ySpeed }
         
 
 createStriker : Striker -> DrawOp
